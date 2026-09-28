@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>සරණංකර දහම් දැනුමාධීපති - Premium Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;700;900&display=swap');
+
+        :root {
+            --gold-light: #fceabb;
+            --gold-main: #f8b500;
+            --gold-dark: #b8860b;
+            --blue-dark: #000428;
+            --blue-light: #004e92;
+        }
+
+        body {
+            font-family: 'Noto Sans Sinhala', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            background: radial-gradient(ellipse at top, #10224d 0%, #030814 80%, #000000 100%);
+            color: white;
+            user-select: none;
+            /* Layout Bug Fix: Ensures the body always takes full screen height */
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .hidden { display: none !important; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a202c; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--gold-dark); border-radius: 4px; }
+
+        .hex-outer {
+            background: linear-gradient(to right, var(--gold-dark), var(--gold-light), var(--gold-dark));
+            padding: 3px;
+            clip-path: polygon(30px 0, calc(100% - 30px) 0, 100% 50%, calc(100% - 30px) 100%, 30px 100%, 0 50%);
+            margin-bottom: 1rem;
+            filter: drop-shadow(0 0 10px rgba(248, 181, 0, 0.3));
+            transition: all 0.3s ease;
+        }
+
+        .hex-inner {
+            background: linear-gradient(180deg, var(--blue-light) 0%, var(--blue-dark) 100%);
+            clip-path: polygon(28px 0, calc(100% - 28px) 0, 100% 50%, calc(100% - 28px) 100%, 28px 100%, 0 50%);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding: 12px 35px;
+            position: relative;
+        }
+
+        .q-box-outer {
+            width: 100%;
+            margin-bottom: 1rem;
+            clip-path: polygon(30px 0, calc(100% - 30px) 0, 100% 50%, calc(100% - 30px) 100%, 30px 100%, 0 50%);
+        }
+        
+        .q-box-inner {
+            clip-path: polygon(28px 0, calc(100% - 28px) 0, 100% 50%, calc(100% - 28px) 100%, 28px 100%, 0 50%);
+            justify-content: center;
+            text-align: center;
+            min-height: 80px;
+        }
+
+        .option-letter { color: var(--gold-main); font-weight: 900; margin-right: 15px; font-size: 1.4rem; flex-shrink: 0; }
+        .option-text { font-size: 1.3rem; font-weight: 700; white-space: normal; line-height: 1.2; word-wrap: break-word; }
+
+        .hex-outer.option-box { cursor: pointer; }
+        .hex-outer.option-box:hover .hex-inner { background: linear-gradient(180deg, #1656b8 0%, #00125c 100%); }
+
+        .option-selected {
+            background: linear-gradient(to right, #ff8c00, #F9D423, #ff8c00) !important;
+            animation: suspense-blink 0.3s infinite alternate;
+            transform: scale(1.02);
+        }
+        .option-selected .hex-inner { background: linear-gradient(180deg, #d36300 0%, #8a3800 100%) !important; }
+
+        .option-correct {
+            background: linear-gradient(to right, #00ff87, #60efff, #00ff87) !important;
+            animation: correct-pulse 1s infinite alternate;
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(0, 255, 0, 0.9);
+            z-index: 10;
+        }
+        .option-correct .hex-inner { background: linear-gradient(180deg, #00a000 0%, #004d00 100%) !important; }
+
+        .option-wrong {
+            background: linear-gradient(to right, #ff0000, #cc0000, #ff0000) !important;
+            animation: shake 0.5s;
+            filter: grayscale(0.5);
+        }
+        .option-wrong .hex-inner { background: linear-gradient(180deg, #6a0000 0%, #3a0000 100%) !important; }
+
+        .glass-panel {
+            background: rgba(0, 5, 20, 0.6);
+            backdrop-filter: blur(10px);
+            border-left: 1px solid rgba(255, 215, 0, 0.3);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.8);
+        }
+
+        /* --- STREAMING_CHUNK:Configuring animations and interactions... --- */
+        .level-tree { font-size: 1rem; gap: 12px; }
+        @media (min-height: 800px) { .level-tree { gap: 18px; font-size: 1.1rem; } }
+        
+        .level-item span:last-child { width: 90px; text-align: right; }
+        .level-current {
+            color: #000; font-weight: bold;
+            background: linear-gradient(to right, var(--gold-light), var(--gold-main));
+            border-radius: 5px; padding: 2px 10px;
+            box-shadow: 0 0 10px var(--gold-main);
+        }
+        .level-passed { color: #00ff00; }
+        .level-safe { color: white; font-weight: bold; }
+
+        .lifelines-container { display: flex; gap: 15px; }
+        .lifeline-btn {
+            background: radial-gradient(circle, var(--blue-light) 0%, var(--blue-dark) 100%);
+            border: 2px solid var(--gold-main);
+            width: 70px; height: 45px; border-radius: 40px;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+            transition: all 0.3s;
+        }
+        .lifeline-btn:hover:not(.lifeline-used) { transform: scale(1.1); box-shadow: 0 0 25px rgba(255, 215, 0, 0.8); }
+        .lifeline-btn i, .lifeline-btn span { color: white; font-size: 18px; font-weight: 900; }
+        
+        .lifeline-used { opacity: 0.4; cursor: not-allowed; border-color: #555; background: #111; box-shadow: none; }
+        .lifeline-used::after { content: '\f00d'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; color: #ff3333; font-size: 30px; text-shadow: 0 0 5px black; }
+
+        @keyframes suspense-blink { 0% { opacity: 1; box-shadow: 0 0 10px #ff8c00; } 100% { opacity: 0.8; box-shadow: 0 0 30px #ff8c00; } }
+        @keyframes correct-pulse { 0% { box-shadow: 0 0 20px #00ff87; } 100% { box-shadow: 0 0 60px #00ff87; } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+        
+        .animate-enter { animation: slideInUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; transform: translateY(40px) scale(0.95); }
+        @keyframes slideInUp { to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes slideOutDown { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(60px) scale(0.9); } }
+        @keyframes flipOutX { 0% { transform: perspective(1000px) rotateX(0deg); opacity: 1; } 40% { transform: perspective(1000px) rotateX(90deg); opacity: 0.5; } 100% { transform: perspective(1000px) rotateX(180deg); opacity: 0; } }
+        @keyframes slowFadeInText { 0% { opacity: 0; filter: blur(5px); transform: translateY(10px); } 100% { opacity: 1; filter: blur(0); transform: translateY(0); } }
+        @keyframes slideInFromBottomExt { 0% { opacity: 0; transform: translateY(100px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .flash-effect { position: fixed; inset: 0; z-index: 99; pointer-events: none; animation: flash-screen 0.5s ease-out; }
+        @keyframes flash-screen { 0% { background-color: rgba(255, 255, 255, 0.3); } 100% { background-color: transparent; } }
+
+        .teacher-control { background: rgba(30, 40, 60, 0.8); border: 1px solid var(--gold-dark); backdrop-filter: blur(5px); transition: all 0.3s; }
+        .teacher-control:hover { background: rgba(50, 60, 90, 0.9); transform: translateY(-2px); }
+
+        #start-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .delay-1 { animation-delay: 0.1s; }
+        
+        @keyframes scale-in-glow { 0% { transform: scale(0.5); opacity: 0; } 60% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 50px var(--gold-main)); } 100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 20px var(--gold-main)); } }
+        @keyframes fade-out-zoom { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+        @keyframes slide-up-fade { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+
+        /* Mobile Rotate Animation */
+        .phone-icon {
+            font-size: 6rem; color: #f8b500;
+            animation: rotatePhone 2s infinite ease-in-out;
+        }
+        @keyframes rotatePhone {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(-90deg); }
+            100% { transform: rotate(-90deg); }
+        }
+
+        .wheel-container {
+            position: relative; width: 600px; height: 600px;
+            border-radius: 50%;
+            box-shadow: 0 0 80px rgba(248,181,0,0.5), inset 0 0 60px rgba(0,0,0,1);
+            border: 14px solid #111;
+            outline: 4px solid var(--gold-dark);
+            background: #000;
+            overflow: hidden;
+        }
+        .wheel-container::before {
+            content: ''; position: absolute; inset: 0;
+            border-radius: 50%; border: 6px dashed var(--gold-main);
+            z-index: 4; pointer-events: none; opacity: 0.8;
+            animation: rotate-dashed 20s linear infinite;
+        }
+        @keyframes rotate-dashed { to { transform: rotate(360deg); } }
+        
+        .wheel-overlay {
+            position: absolute; inset: 0; border-radius: 50%;
+            background: radial-gradient(circle, transparent 35%, rgba(0,0,0,0.9) 100%);
+            z-index: 2; pointer-events: none;
+        }
+        .wheel-pointer {
+            position: absolute; top: -25px; left: 50%; transform: translateX(-50%); z-index: 10;
+        }
+        .wheel {
+            width: 100%; height: 100%; border-radius: 50%; position: relative;
+            background: conic-gradient(from -25.71deg,
+                #2a0845 0 51.42deg,
+                #003366 51.42deg 102.85deg,
+                #004d40 102.85deg 154.28deg,
+                #331400 154.28deg 205.71deg,
+                #800000 205.71deg 257.14deg,
+                #4a0000 257.14deg 308.57deg,
+                #4a148c 308.57deg 360deg
+            );
+            box-shadow: inset 0 0 40px rgba(0,0,0,1);
+        }
+        .wheel::after {
+            content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 100px; height: 100px; background: radial-gradient(circle, #fceabb 0%, #b8860b 100%);
+            border-radius: 50%; border: 6px solid #222;
+            box-shadow: 0 0 40px rgba(0,0,0,1), inset 0 0 15px rgba(255,255,255,0.7); z-index: 5;
+        }
+        .wheel-line {
+            position: absolute; top: 0; left: 50%; width: 4px; height: 50%;
+            background: linear-gradient(to bottom, var(--gold-light), transparent);
+            transform-origin: 50% 100%; margin-left: -2px; z-index: 1;
+        }
+        .wheel-text {
+            position: absolute; top: 0; left: 50%; width: 180px; height: 300px; margin-left: -90px;
+            transform-origin: 50% 100%; display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
+            padding-top: 45px; font-weight: 900; font-size: 1.5rem; color: white; text-shadow: 2px 2px 8px rgba(0,0,0,1);
+            text-align: center; line-height: 1.2; z-index: 2;
+        }
+        .wheel-grade { color: var(--gold-main); font-size: 1.1rem; margin-bottom: 6px; font-weight: 900; letter-spacing: 1px; }
+        .wheel-name { font-size: 1.5rem; text-shadow: 0 0 12px rgba(0,0,0,1); }
+        
+        .wheel-spin-anim {
+            animation: spin-drama 14s cubic-bezier(0.1, 0.88, 0.15, 1) forwards;
+        }
+        @keyframes spin-drama {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(3908.57deg); } 
+        }
+
+        /* Settings CSS */
+        input[type="file"]::file-selector-button {
+            background-color: var(--gold-main); color: black; font-weight: bold; padding: 5px 15px;
+            border-radius: 5px; border: none; cursor: pointer; transition: 0.3s; margin-right: 10px;
+        }
+        input[type="file"]::file-selector-button:hover { background-color: var(--gold-light); }
+        .tab-btn.active { color: var(--gold-main); border-bottom: 2px solid var(--gold-main); background: rgba(0,0,0,0.3); }
+        .tab-btn { transition: 0.3s; }
+    </style>
+</head>
+<body class="flex flex-col w-screen h-screen overflow-hidden text-white">
+
+    <!-- Loading Video -->
+    <video id="intro-video-player" class="fixed inset-0 w-full h-full object-cover z-[300] hidden bg-black"></video>
+
+    <!-- Mobile Rotation Overlay -->
+    <div id="rotate-notification" class="hidden fixed inset-0 bg-black z-[500] flex flex-col items-center justify-center">
+        <i class="fa-solid fa-mobile-screen-button phone-icon mb-8"></i>
+        <h2 class="text-3xl md:text-5xl font-bold text-white text-center px-4 leading-relaxed">කරුණාකර ඔබගේ දුරකථනය <br><span class="text-yellow-400 text-4xl md:text-6xl">Landscape (හරස් අතට)</span><br> හරවන්න</h2>
+    </div>
+
+    <div id="start-screen">
+        <img id="start-bg-logo" src="logo.jpg" class="absolute inset-0 w-full h-full object-cover opacity-70 z-0 pointer-events-none" alt="Background" onerror="if(!this.f){this.f=1; this.src='logo.jpeg';} else if(this.f===1){this.f=2; this.src='logo.png';} else {this.style.display='none';}">
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-black/60 to-black/95 z-0 pointer-events-none"></div>
+        
+        <button onclick="openSettingsModal()" class="absolute top-6 right-6 z-20 text-gray-300 hover:text-yellow-400 text-2xl bg-gray-900/50 p-3 rounded-full border border-gray-600 hover:border-yellow-500 transition shadow-lg">
+            <i class="fa-solid fa-gear"></i> සැකසුම්
+        </button>
+
+        <div class="z-10 flex flex-col items-center">
+            <h1 class="text-5xl md:text-7xl font-black text-yellow-500 mb-6 drop-shadow-lg text-center leading-tight" style="text-shadow: 0 0 25px #f8b500;">සරණංකර <br> දහම් දැනුමාධීපති</h1>
+            <p class="text-2xl mb-10 text-gray-300">Premium Reality Show Edition</p>
+            <button onclick="requestLandscapeAndStart()" class="px-12 py-5 bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-bold text-3xl rounded-full hover:scale-110 transition-transform shadow-[0_0_30px_rgba(248,181,0,0.8)]">
+                ක්‍රීඩාව ආරම්භ කරන්න
+            </button>
+        </div>
+    </div>
+
+    <!-- Name Input Screen (Replaced Wheel) -->
+    <div id="name-input-screen" class="hidden fixed inset-0 z-[120] flex flex-col items-center justify-center backdrop-blur-md" style="background: radial-gradient(circle, #0d1b3e 0%, #000 100%);">
+        <h2 class="text-5xl md:text-6xl text-yellow-500 font-black mb-12 drop-shadow-[0_0_20px_rgba(248,181,0,0.8)] text-center px-4">තරඟකරුගේ නම ඇතුළත් කරන්න</h2>
+        <input type="text" id="contestant-name" placeholder="නම මෙහි ටයිප් කරන්න..." class="w-11/12 max-w-3xl bg-black/60 border-4 border-yellow-500 text-white text-3xl md:text-5xl p-6 rounded-3xl text-center focus:outline-none focus:border-yellow-300 shadow-[0_0_40px_rgba(248,181,0,0.4)] mb-12 transition-all">
+        <button onclick="submitContestantName()" class="px-12 py-5 bg-gradient-to-r from-green-600 to-green-400 text-white font-bold text-3xl md:text-4xl rounded-full hover:scale-110 transition-transform shadow-[0_0_30px_rgba(0,255,0,0.4)]">
+            ඉදිරියට යන්න <i class="fa-solid fa-arrow-right ml-2"></i>
+        </button>
+    </div>
+
+    <!-- Winner Announcement Screen -->
+    <div id="winner-screen" class="hidden fixed inset-0 z-[125] bg-black/95 flex flex-col items-center justify-center cursor-pointer" onclick="if(gameState==='WINNER_DISPLAYED') showLifelinesIntro();">
+        <h2 class="text-4xl text-gray-300 mb-6 font-bold">අද තරඟකරු:</h2>
+        <h1 id="announce-name" class="text-7xl md:text-8xl font-black text-yellow-400 drop-shadow-[0_0_50px_rgba(248,181,0,1)] text-center leading-tight mb-12 px-6">
+            <!-- Name will be dynamically inserted here -->
+        </h1>
+        <p class="absolute bottom-6 text-xl text-yellow-400 animate-pulse font-bold bg-black/50 px-6 py-2 rounded-full border border-yellow-500/50">ඉදිරියට යාමට තිරය ස්පර්ශ කරන්න <i class="fa-solid fa-arrow-right ml-2"></i></p>
+    </div>
+
+    <!-- Lifelines Intro Screen -->
+    <div id="lifeline-intro-screen" class="hidden fixed inset-0 z-[150] bg-black/95 flex flex-col justify-center items-center backdrop-blur-lg">
+        <h1 id="lifeline-title" class="text-5xl font-black text-yellow-500 mb-16 drop-shadow-lg opacity-0 transition-opacity duration-1000">උපකාරක අවස්ථා</h1>
+        <div class="flex gap-16">
+            <div id="intro-ll-1" class="flex flex-col items-center opacity-0 transition-opacity duration-1000">
+                <div class="lifeline-btn !w-24 !h-16 mb-4 !cursor-default"><span class="!text-2xl">50:50</span></div>
+                <span class="text-2xl font-bold text-white">50:50</span>
+            </div>
+            <div id="intro-ll-2" class="flex flex-col items-center opacity-0 transition-opacity duration-1000">
+                <div class="lifeline-btn !w-24 !h-16 mb-4 !cursor-default"><i class="fa-solid fa-users !text-2xl"></i></div>
+                <span class="text-2xl font-bold text-white">ප්‍රේක්ෂක මනාපය</span>
+            </div>
+            <div id="intro-ll-3" class="flex flex-col items-center opacity-0 transition-opacity duration-1000">
+                <div class="lifeline-btn !w-24 !h-16 mb-4 !cursor-default"><i class="fa-solid fa-rotate !text-2xl"></i></div>
+                <span class="text-2xl font-bold text-white">ප්‍රශ්නය මාරු කිරීම</span>
+            </div>
+        </div>
+        <button id="lifeline-next-btn" onclick="proceedToGame()" class="mt-16 px-10 py-4 bg-gradient-to-r from-green-600 to-green-400 text-white font-bold text-2xl rounded-full hover:scale-110 transition-all opacity-0 pointer-events-none shadow-[0_0_20px_rgba(0,255,0,0.4)]">
+            ඉදිරියට යන්න <i class="fa-solid fa-arrow-right ml-2"></i>
+        </button>
+    </div>
+
+    <!-- h-full and flex-1 applied to fix bottom-gap issue -->
+    <div class="flex-1 flex w-full max-w-[1500px] mx-auto h-full py-4 px-4 hidden" id="main-game">
+        
+        <div class="flex-1 flex flex-col justify-between pr-6 relative h-full">
+            
+            <div class="flex justify-between items-start px-2 mt-2 relative z-10">
+                <div class="text-xl font-black text-yellow-500 drop-shadow-md bg-black/60 px-5 py-2 rounded-full border border-yellow-600/40 backdrop-blur-sm">
+                    දහම් දැනුමෙන් ජයග්‍රහණය කරා
+                </div>
+                
+                <div class="lifelines-container relative z-10">
+                    <div id="btn-5050" class="lifeline-btn" onclick="useFiftyFifty()" title="50:50"><span>50:50</span></div>
+                    <div id="btn-audience" class="lifeline-btn" onclick="useAudiencePoll()" title="ප්‍රේක්ෂක මනාපය"><i class="fa-solid fa-users"></i></div>
+                    <div id="btn-switch" class="lifeline-btn" onclick="useSwitchQuestion()" title="ප්‍රශ්නය මාරු කරන්න"><i class="fa-solid fa-rotate"></i></div>
+                </div>
+            </div>
+
+            <div id="audience-modal" class="hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-11/12 max-w-md z-50 p-6 text-center border-yellow-500 border-4 rounded-3xl" style="background: rgba(0,10,40,0.98); box-shadow: 0 0 50px rgba(0,0,0,1);">
+                <i class="fa-solid fa-users text-5xl text-yellow-400 mb-4"></i>
+                <h2 class="text-2xl md:text-3xl text-yellow-400 mb-6 font-bold">ප්‍රේක්ෂක මනාපය</h2>
+
+                <div class="flex flex-col gap-4 mb-8 px-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-white font-bold text-xl w-6">A</span>
+                        <div class="flex-1 bg-gray-800 rounded-full h-6 overflow-hidden border border-gray-600">
+                            <div id="bar-opt-0" class="bg-gradient-to-r from-blue-600 to-blue-400 h-full w-0 transition-all duration-1000 ease-out"></div>
+                        </div>
+                        <span id="pct-opt-0" class="text-yellow-400 font-bold w-12 text-right text-lg">0%</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-white font-bold text-xl w-6">B</span>
+                        <div class="flex-1 bg-gray-800 rounded-full h-6 overflow-hidden border border-gray-600">
+                            <div id="bar-opt-1" class="bg-gradient-to-r from-blue-600 to-blue-400 h-full w-0 transition-all duration-1000 ease-out"></div>
+                        </div>
+                        <span id="pct-opt-1" class="text-yellow-400 font-bold w-12 text-right text-lg">0%</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-white font-bold text-xl w-6">C</span>
+                        <div class="flex-1 bg-gray-800 rounded-full h-6 overflow-hidden border border-gray-600">
+                            <div id="bar-opt-2" class="bg-gradient-to-r from-blue-600 to-blue-400 h-full w-0 transition-all duration-1000 ease-out"></div>
+                        </div>
+                        <span id="pct-opt-2" class="text-yellow-400 font-bold w-12 text-right text-lg">0%</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-white font-bold text-xl w-6">D</span>
+                        <div class="flex-1 bg-gray-800 rounded-full h-6 overflow-hidden border border-gray-600">
+                            <div id="bar-opt-3" class="bg-gradient-to-r from-blue-600 to-blue-400 h-full w-0 transition-all duration-1000 ease-out"></div>
+                        </div>
+                        <span id="pct-opt-3" class="text-yellow-400 font-bold w-12 text-right text-lg">0%</span>
+                    </div>
+                </div>
+                
+                <button onclick="closeAudiencePoll()" class="bg-green-600 px-6 py-3 rounded-full text-white font-bold hover:bg-green-700 transition w-full text-xl shadow-[0_0_15px_rgba(0,255,0,0.4)]">අවසන් කරන්න</button>
+            </div>
+
+            <div class="absolute top-20 left-0 right-0 bottom-0 flex items-start justify-center z-0 pointer-events-none pt-4">
+                <img id="main-logo" src="logo.jpg" alt="Saranankara Daham Logo" 
+                     class="h-auto max-h-[42vh] w-auto max-w-[85%] object-contain rounded-[2rem] drop-shadow-[0_0_35px_rgba(248,181,0,0.3)] border-2 border-yellow-600/20"
+                     onerror="if(!this.f){this.f=1; this.src='logo.jpeg';} else if(this.f===1){this.f=2; this.src='logo.png';} else {this.src='https://placehold.co/800x400/0d1b3e/f8b500?text=Logo+Here';}">
+            </div>
+
+            <!-- MT-AUTO strictly anchors this exactly at the bottom of the valid flex container screen -->
+            <div id="bottom-section" class="flex flex-col items-center w-full relative z-10 mb-8 mt-auto hidden">
+                <div id="q-wrapper" class="w-full transition-all duration-[800ms] ease-in-out translate-y-[100px] scale-[1.05]">
+                    <div id="question-container" class="hex-outer q-box-outer animate-enter delay-1 w-full mb-10">
+                        <div class="hex-inner q-box-inner py-2 md:py-3">
+                            <span id="question-number" class="absolute top-2 left-6 text-yellow-500 text-sm font-bold tracking-widest bg-black/60 px-2 rounded">Q1</span>
+                            <p id="question-text" class="text-xl md:text-2xl lg:text-3xl font-bold leading-snug drop-shadow-lg text-center px-4 md:px-8">
+                                <!-- Question Text -->
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="options-grid" class="grid grid-cols-2 gap-x-6 gap-y-4 w-full px-6">
+                    <div id="opt-0" class="hex-outer option-box opacity-0 pointer-events-none" onclick="selectAnswer(0)">
+                        <div class="hex-inner py-3"><span class="option-letter">A:</span> <span id="text-0" class="option-text"></span></div>
+                    </div>
+                    <div id="opt-1" class="hex-outer option-box opacity-0 pointer-events-none" onclick="selectAnswer(1)">
+                        <div class="hex-inner py-3"><span class="option-letter">B:</span> <span id="text-1" class="option-text"></span></div>
+                    </div>
+                    <div id="opt-2" class="hex-outer option-box opacity-0 pointer-events-none" onclick="selectAnswer(2)">
+                        <div class="hex-inner py-3"><span class="option-letter">C:</span> <span id="text-2" class="option-text"></span></div>
+                    </div>
+                    <div id="opt-3" class="hex-outer option-box opacity-0 pointer-events-none" onclick="selectAnswer(3)">
+                        <div class="hex-inner py-3"><span class="option-letter">D:</span> <span id="text-3" class="option-text"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center gap-6 pb-2 pt-2 opacity-20 hover:opacity-100 transition-opacity absolute bottom-2 left-0 right-0 z-20">
+                <button onclick="lockAnswer()" class="teacher-control px-6 py-1 rounded-full text-yellow-400 font-bold shadow-lg flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-lock"></i> Lock 
+                </button>
+                <button onclick="nextState()" id="next-btn" class="teacher-control px-6 py-1 rounded-full text-green-400 font-bold shadow-lg flex items-center gap-2 text-sm hidden">
+                    Next <i class="fa-solid fa-forward"></i>
+                </button>
+                <button onclick="resetToHome()" id="exit-btn" class="teacher-control bg-red-900/90 border-red-500 px-6 py-1 rounded-full text-white font-bold shadow-lg flex items-center gap-2 text-sm hidden">
+                    Exit Game <i class="fa-solid fa-house"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="w-64 flex flex-col justify-center pl-4 pr-2 h-full z-10 glass-panel rounded-l-3xl">
+            <!-- Sidebar for 15 Questions -->
+            <div id="level-tree" class="level-tree flex flex-col-reverse justify-center h-[95%]">
+                <!-- Levels -->
+            </div>
+        </div>
+    </div>
+    
+    <div id="points-transition-container" class="fixed inset-0 z-[150] flex flex-col items-center justify-center pointer-events-none hidden transition-opacity duration-500" style="background: radial-gradient(circle, rgba(0,20,50,0.95) 0%, rgba(0,0,0,0.98) 100%); backdrop-filter: blur(10px);">
+        <div id="points-subtext" class="text-2xl md:text-3xl text-gray-300 mb-4 opacity-0 font-bold tracking-wide">ඔබට හිමිවන ලකුණු ප්‍රමාණය</div>
+        <div id="points-text" class="text-7xl md:text-9xl font-black text-yellow-400 opacity-0" style="text-shadow: 0 0 40px rgba(248,181,0,0.8);"></div>
+    </div>
+
+    <div id="flash-container"></div>
+
+    <!-- --- STREAMING_CHUNK:Initializing JS and Audio contexts... --- -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        const dbName = "DahamMediaDB_v6";
+        let db;
+        let customMediaUrls = {};
+
+        // Default Hosted Media Paths for GitHub Pages
+        const defaultMediaPaths = {
+            'logo': 'logo.jpg',
+            'video': 'intro.mp4',
+            'wheel_spin': 'wheel_spin.mp3',
+            'winner': 'winner.mp3',
+            'call_bgm': 'call_bgm.mp3',
+            'transition': 'transition.mp3',
+            'lock': 'lock.mp3',
+            'correct': 'correct.mp3',
+            'wrong': 'wrong.mp3',
+            'bgm': 'bgm.mp3'
+        };
+        
+        let wheelSpinAudioInstance = null;
+        let callBgmAudioInstance = null;
+
+        const request = indexedDB.open(dbName, 1);
+        request.onupgradeneeded = (e) => { 
+            db = e.target.result; 
+            if (db.objectStoreNames.contains("media")) db.deleteObjectStore("media");
+            db.createObjectStore("media"); 
+        };
+        request.onsuccess = (e) => { db = e.target.result; loadCustomMediaFromDB(); };
+
+        function handleFileUpload(event, type) {
+            const file = event.target.files[0];
+            if (!file || !db) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64Str = e.target.result;
+                const tx = db.transaction("media", "readwrite");
+                tx.objectStore("media").put(base64Str, type);
+                tx.oncomplete = () => {
+                    customMediaUrls[type] = base64Str;
+                    document.getElementById(`status-${type}`).classList.remove('hidden');
+                    // Dynamic Logo Update
+                    if(type === 'logo') {
+                        const img = document.getElementById('main-logo');
+                        if (img) img.src = base64Str;
+                        const bgImg = document.getElementById('start-bg-logo');
+                        if (bgImg) bgImg.src = base64Str;
+                    }
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function loadCustomMediaFromDB() {
+            // Added 'logo', 'wheel_spin', 'call_bgm'
+            ['video', 'winner', 'transition', 'lock', 'correct', 'wrong', 'bgm', 'logo', 'wheel_spin', 'call_bgm'].forEach(type => {
+                const req = db.transaction("media", "readonly").objectStore("media").get(type);
+                req.onsuccess = (e) => {
+                    if (e.target.result) {
+                        customMediaUrls[type] = e.target.result; 
+                        document.getElementById(`status-${type}`).classList.remove('hidden');
+                        if (type === 'logo') {
+                            const img = document.getElementById('main-logo');
+                            if (img) img.src = e.target.result;
+                            const bgImg = document.getElementById('start-bg-logo');
+                            if (bgImg) bgImg.src = e.target.result;
+                        }
+                    }
+                };
+            });
+        }
+
+        function playPremiumSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+            
+            if (type === 'start') {
+                [261.63, 329.63, 392.00, 523.25].forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, now);
+                    gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(0.15, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 3);
+                    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 3);
+                });
+            }
+            else if (type === 'winner') {
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'square'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.5);
+                gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(0.2, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 3);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 3);
+            }
+            else if (type === 'transition') {
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.3);
+                gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(0.3, now + 0.1); gain.gain.linearRampToValueAtTime(0, now + 0.4);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.4);
+            } 
+            else if (type === 'select') {
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'square'; osc.frequency.setValueAtTime(800, now);
+                gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(0.1, now + 0.02); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.15);
+            }
+            else if (type === 'lock') {
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, now); osc.frequency.exponentialRampToValueAtTime(40, now + 1.5);
+                gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0, now + 3);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 3);
+            }
+            else if (type === 'correct') {
+                [440, 554.37, 659.25, 880].forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(freq, now + (i * 0.05));
+                    gain.gain.setValueAtTime(0, now + (i * 0.05)); gain.gain.linearRampToValueAtTime(0.2, now + (i * 0.05) + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 2);
+                    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now + (i * 0.05)); osc.stop(now + 2);
+                });
+            }
+            else if (type === 'wrong') {
+                const osc1 = audioCtx.createOscillator(); const osc2 = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc1.type = 'sawtooth'; osc2.type = 'square';
+                osc1.frequency.setValueAtTime(150, now); osc2.frequency.setValueAtTime(157, now);
+                osc1.frequency.exponentialRampToValueAtTime(80, now + 1); osc2.frequency.exponentialRampToValueAtTime(85, now + 1);
+                gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 1);
+                osc1.connect(gain); osc2.connect(gain); gain.connect(audioCtx.destination); osc1.start(now); osc2.start(now); osc1.stop(now + 1); osc2.stop(now + 1);
+            }
+            else if (type === 'point-win') {
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.4);
+                gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(0.4, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 1.5);
+            }
+        }
+
+        let bgmAudioInstance = null;
+        let isDefaultBgmPlaying = false;
+        let defaultBgmNodes = [];
+        
+        function startBgMusic() {
+            const bgmSrc = customMediaUrls['bgm'] || defaultMediaPaths['bgm'];
+            if (bgmSrc) {
+                if (bgmAudioInstance) { bgmAudioInstance.pause(); bgmAudioInstance.currentTime = 0; }
+                bgmAudioInstance = new Audio(bgmSrc);
+                bgmAudioInstance.loop = true;
+                bgmAudioInstance.play().catch(e => {
+                    console.log("Hosted BGM not found, falling back to default.", e);
+                    playPremiumDefaultBGM();
+                });
+            } else {
+                playPremiumDefaultBGM();
+            }
+        }
+        
+        function stopBgMusic() {
+            if (bgmAudioInstance) { bgmAudioInstance.pause(); bgmAudioInstance.currentTime = 0; }
+            stopPremiumDefaultBGM();
+        }
+        
+        function playPremiumDefaultBGM() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            stopPremiumDefaultBGM();
+            isDefaultBgmPlaying = true;
+            
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(65, now);
+            
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.08, now + 1);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            
+            defaultBgmNodes.push({osc, gain});
+        }
+        
+        function stopPremiumDefaultBGM() {
+            if(!isDefaultBgmPlaying) return;
+            isDefaultBgmPlaying = false;
+            const now = audioCtx.currentTime;
+            defaultBgmNodes.forEach(node => {
+                try { node.gain.gain.linearRampToValueAtTime(0, now + 0.3); node.osc.stop(now + 0.4); } catch(e){}
+            });
+            defaultBgmNodes = [];
+        }
+
+        function playGameAudio(type) {
+            return new Promise((resolve) => {
+                const mediaSrc = customMediaUrls[type] || defaultMediaPaths[type];
+                if (mediaSrc && !['start', 'select', 'point-win'].includes(type)) {
+                    const audio = new Audio(mediaSrc); 
+                    audio.onended = resolve; 
+                    audio.play().catch(e => {
+                        // If file not found in media folder, fallback to generated sound
+                        playPremiumSound(type); 
+                        const dur = { 'winner': 3000, 'transition': 400, 'lock': 3000, 'correct': 2000, 'wrong': 1000, 'select': 150 }; 
+                        setTimeout(resolve, dur[type] || 500);
+                    });
+                } else {
+                    playPremiumSound(type); 
+                    const dur = { 'winner': 3000, 'transition': 400, 'lock': 3000, 'correct': 2000, 'wrong': 1000, 'select': 150 }; 
+                    setTimeout(resolve, dur[type] || 500);
+                }
+            });
+        }
+
+        // --- STREAMING_CHUNK:Loading Questions Data... ---
+        // New List of 15 Questions exactly as provided
+        const defaultMainQuestions = [
+            { question: "දුටු ගැමුණු රජු විසින් ඉදිකල විහාරස්ථානයක් නොවන්නේ", options: ["රුවන්වැලි සෑය.", "මිරිස වැටිය.", "ථූපාරාමය.", "ලෝවාමහාපාය."], correctAnswer: 2 },
+            { question: "අංජන නම් ශාක්‍ය වංශිකයාගේ වැඩිමහල් දියණිය හා ඇයගේ නැගනිය පිළිවෙලින් දැක්වෙන පිළිතුර වන්නේ ?", options: ["මහාමායා දේවිය හා කිසාගෝතමී දේවියයි.", "මහාමායා දේවිය හා මහාප්‍රජාපතී ගෝතමී දේවියයි.", "මහාප්‍රජාපතී ගෝතමී දේවිය හා මහාමායා දේවියයි.", "මහාප්‍රජාපතී ගෝතමී දේවිය හා කිසාගෝතමී දේවියයි."], correctAnswer: 1 },
+            { question: "බුදු හිමි විසින් උන් වහන්සේට බුදු බව ලැබීමේදී සෙවන දුන් ජයශ්‍රී මහා බෝධීන් වහන්සේට කලගුණ සැළකීමක් ලෙස", options: ["අනිමිස ලෝචන පූජාව සිදු කරන ලදී.", "රුවන් ගෙයි වැඩ සිටින ලදී.", "රුවන් සක්මන සිදු කරන ලදී.", "බෝ රුක මුල වැඩ සිටින ලදී."], correctAnswer: 0 },
+            { question: "සිද්ධාර්ථ කුමාරයා ඉපදී නම් තැබීමේ උත්සවය පැවැත්වූයේ,", options: ["දින හතකට පසුව ය.", "දින දහයකට පසුව ය.", "දින අටකට පසුව ය.", "දින පහකට පසුව ය."], correctAnswer: 3 },
+            { question: "මිරිසවැටිය ඉදිකර ඇත්තේ දුටුගැමුණු රජුගේ,", options: ["පංචායුධය තැන්පත් කොටය.", "කුන්තායුධය තැන්පත් කොටය.", "කංචා යුධය තැන්පත් කොටය.", "වේලායුධය තැන්පත් කොටය."], correctAnswer: 1 },
+            { question: "අකාලිකෝ යන දහම් ගුණයෙන් කියවෙන්නේ,", options: ["තම සිතෙහි උපදවාගත යුතුය.", "කල් නොයවා විපාක ගෙන දෙන්නේය.", "එන්න ධර්මය දකින්න.", "මේ ජීවිතයේදීම තමාටම ප්‍රතිඵලයක් දැකිය හැකිය."], correctAnswer: 1 },
+            { question: "\"සයිංසු යස්මිං සුගතස්ස ධාතු - නිම්මාය රංසුජ්ජල බුද්ධ රූපං\" මෙම ඝාථාවෙන් වන්දනා කරන්නේ", options: ["කැළණි වෙහෙරයි.", "මිරිස වැටිය වෙහෙරයි.", "ස්වර්ණමාලී සෑය.", "මහියංගන සෑය."], correctAnswer: 2 },
+            { question: "සුද්ධෝදන රජුගේ මුනුබුරකු ගෝ මිනිඹිරියක් නොවන්නේ", options: ["රාහුල කුමරු", "නන්ද කුමරු", "සුන්දරී නන්දා කුමරිය.", "සිදුහත් කුමරු."], correctAnswer: 3 },
+            { question: "බුදු සසුනේ ඍද්ධිමතුන් අතර අගතනතුර හා වම් අගසවු තනතුර දැරූ රහතන් වහන්සේගේ ගිහි නම (පැවදිවීමට පෙර නම) වන්නේ", options: ["මට්ට කුණ්ඩලී පරිබ්‍රාජකයා.", "සංජය පරිබ්‍රාජකයා.", "කෝලීත පරිබ්‍රාජකයා.", "උපතිස්ස පරිබ්‍රාජකයා."], correctAnswer: 2 },
+            { question: "\"කඳුළු පිරුණු මුහුණින් යුතු ව පසුතැවිලි වෙමින් විපාක විඳීමට සිදු වන දේ නොකරන්න.\" යන අදහස ගෙන දෙන ධම්ම පද ඝාථාව වන්නේ.", options: ["තංච කම්මං කතං සාධූ", "නතං කම්මං කතං සාධූ", "සුප්පබුද්ධං පබුජ්ඣන්ති", "සබ්බේ තසන්ති දණ්ඩස්ස"], correctAnswer: 1 },
+            { question: "භික්ෂුණී ශාසනය ආරම්භ වූයේ බුදු හිමි බුද්ධත්වයෙන්,", options: ["වසර 05 කට පසු බිනර පොහෝ දිනකය.", "වසර 05 කට පසු නිකිනි පොහෝ දිනකය.", "වසර 05 කට පසු ඇසළ පොහෝ දිනකය.", "වසර 05 කට පසු දුරුතු පොහෝ දිනකය."], correctAnswer: 0 },
+            { question: "මුගලන් මහරහතන් වහන්සේගේ ඍද්ධි බලයෙන් පැහැදීමට පත්වූ, අනුන්ට දීමට සිදුවෙතැයි බියෙන් උඩුමහලට වී බිරිඳ සමඟ රහසේ කැවුම් පිසීමට සූදානම්ව සිටි සිටුතුමා වන්නේ කවරෙක්ද?", options: ["මච්ඡරිය ඉල්ලිස සිටාණන්", "කෝසිය අදින්නපුබ්බක සිටාණන්", "බිලාලපාදක කෝසිය සිටාණන්", "මච්ඡරිය කෝසිය සිටාණන්"], correctAnswer: 3 },
+            { question: "කාවන්තිස්ස රජු රජකම් කළේ කොහිද?", options: ["මායා රටේ අනුරාධපුර රාජධානියේ", "රුහුණු රටේ පොළොන්නරුව රාජධානියේ", "රුහුණු රටේ මාගම රාජධානියේ", "පිහිටි රටේ කෙත්යාය රාජධානියේ"], correctAnswer: 2 },
+            { question: "\"එකම පුතෙකු සිටින මවක්, තමාගේ ජීවිතය පවා නොතකා තම එකම පුතු යම් අයුරකින් ආරක්ෂා කරන්නේද, එලෙසම ඔබත් ලෝකයේ සිටින සියලුම සත්ත්වයන් කෙරෙහි සීමාවක් නොමැතිව මෙත් සිත (මෛත්‍රිය) පතුරුවන්න \" මෙම අදහස ගෙන දෙන ඝාථා පාඨය වන්නේ ?", options: ["මාතාපිතු උපට්ඨානං - පුත්තදාරස්ස සංගහෝ", "පුත්තං වා පියං මනුස්සං - ආයුසා පරිපාලෙථ", "මාතා යථා නියං පුත්තං - ආයුසා ඒක පුත්තමනුරක්ඛේ.", "යථාපි මාතා සකේ පුත්තේ - ආරක්ඛං සුපතිට්ඨිතා"], correctAnswer: 2 },
+            { question: "\"සුප්පබුද්ධං පබුජ්ඣන්ති\" යන ධම්ම පද ඝාථාවෙන් කියවෙන්නේ ?", options: ["ගෞතම බුදුරජාණන් වහන්සේගේ ශ්‍රාවකයෝ ගැන වේ.", "යශෝධරා දේවිය ගේ පියා වූ සුප්ප බුද්ධ රජතුමා ගැන වේ.", "මෙත් වැඩීමේ ආනුසන්ස වේ.", "භාවනාව වැඩීමෙන් ලැබෙන ආනිසංස වේ."], correctAnswer: 0 }
+        ];
+
+        // Backup Question (Qs1)
+        const defaultBackupQuestions = [
+            { question: "පහත සදහන් පිංකම් අතරින් ප්‍රතිපත්ති පූජා ගනයට අයත් පිංකමක් වන්නේ ?", options: ["පහන් පූජා පැවැත්වීම.", "මල් පෙරහැරවල් පැවැත්වීම.", "පහන් කූඩූ සැකසීම.", "ඉහත කිසිවක් නොවේ."], correctAnswer: 3 }
+        ];
+
+        let allQuestions = JSON.parse(localStorage.getItem('daham_main_q_v9')) || JSON.parse(JSON.stringify(defaultMainQuestions));
+        let backupQuestions = JSON.parse(localStorage.getItem('daham_backup_q_v9')) || JSON.parse(JSON.stringify(defaultBackupQuestions));
+
+        // State Machine Variables
+        let gameState = 'start'; // start, NAME_INPUT, WINNER_DISPLAYED, LIFELINES_INTRO, GAME_EMPTY, GAME_PLAYING
+        let lifelineIntroStep = 0;
+        
+        let currentQuestionIndex = 0;
+        let selectedOptionIndex = -1;
+        let answerLocked = false;
+        let displayStep = 0;
+        let lifelines = { fiftyFifty: false, audiencePoll: false, switchQuestion: false };
+        let isSwitchPending = false;
+        
+        // 15 Level Points Setup (Exactly as requested)
+        const levelRewards = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "200", "400", "500", "1000", "2000"];
+
+        // Settings Logic
+        function openSettingsModal() { document.getElementById('settings-modal').classList.remove('hidden'); switchTab('media'); }
+        function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active', 'text-yellow-400'));
+            document.getElementById('content-media').classList.add('hidden'); document.getElementById('content-questions').classList.add('hidden');
+            document.getElementById(`tab-${tabId}`).classList.add('active', 'text-yellow-400');
+            document.getElementById(`content-${tabId}`).classList.remove('hidden');
+            if (tabId === 'questions') renderQuestionEditors();
+        }
+
+        function renderQuestionEditors() {
+            const type = document.getElementById('q-type-selector').value;
+            const container = document.getElementById('questions-editor-container'); container.innerHTML = '';
+            const arr = type === 'main' ? allQuestions : backupQuestions;
+            arr.forEach((q, index) => {
+                container.innerHTML += `
+                <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
+                    <h3 class="text-yellow-400 mb-2 font-bold bg-gray-900 inline-block px-3 py-1 rounded">ප්‍රශ්නය ${index + 1}</h3>
+                    <textarea id="edit-${type}-q-${index}" class="w-full bg-gray-900 text-white p-3 rounded mb-3 border border-gray-600 focus:border-yellow-500" rows="2">${q.question}</textarea>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                        <div class="flex items-center"><span class="w-8 text-yellow-400 font-bold">A:</span><input type="text" id="edit-${type}-o0-${index}" value="${q.options[0]}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600"></div>
+                        <div class="flex items-center"><span class="w-8 text-yellow-400 font-bold">B:</span><input type="text" id="edit-${type}-o1-${index}" value="${q.options[1]}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600"></div>
+                        <div class="flex items-center"><span class="w-8 text-yellow-400 font-bold">C:</span><input type="text" id="edit-${type}-o2-${index}" value="${q.options[2]}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600"></div>
+                        <div class="flex items-center"><span class="w-8 text-yellow-400 font-bold">D:</span><input type="text" id="edit-${type}-o3-${index}" value="${q.options[3]}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600"></div>
+                    </div>
+                    <div class="flex items-center bg-black/40 p-2 rounded">
+                        <span class="text-gray-300 mr-3 font-bold">නිවැරදි පිළිතුර:</span>
+                        <select id="edit-${type}-ans-${index}" class="bg-gray-900 text-yellow-400 p-1 px-4 rounded border border-gray-600 font-bold">
+                            <option value="0" ${q.correctAnswer == 0 ? 'selected' : ''}>A</option><option value="1" ${q.correctAnswer == 1 ? 'selected' : ''}>B</option><option value="2" ${q.correctAnswer == 2 ? 'selected' : ''}>C</option><option value="3" ${q.correctAnswer == 3 ? 'selected' : ''}>D</option>
+                        </select>
+                    </div>
+                </div>`;
+            });
+        }
+
+        function saveAllQuestions() {
+            const type = document.getElementById('q-type-selector').value; const arr = type === 'main' ? allQuestions : backupQuestions;
+            for (let i = 0; i < arr.length; i++) {
+                arr[i] = {
+                    question: document.getElementById(`edit-${type}-q-${i}`).value,
+                    options: [document.getElementById(`edit-${type}-o0-${i}`).value, document.getElementById(`edit-${type}-o1-${i}`).value, document.getElementById(`edit-${type}-o2-${i}`).value, document.getElementById(`edit-${type}-o3-${i}`).value],
+                    correctAnswer: parseInt(document.getElementById(`edit-${type}-ans-${i}`).value)
+                };
+            }
+            if (type === 'main') localStorage.setItem('daham_main_q_v9', JSON.stringify(allQuestions));
+            else localStorage.setItem('daham_backup_q_v9', JSON.stringify(backupQuestions));
+            alert("වෙනස්කම් සාර්ථකව සේව් විය!");
+        }
+
+        function resetToDefaults() {
+            if (confirm("සියලුම ශබ්ද, වීඩියෝ සහ ප්‍රශ්න මුල් තත්වයට පත් කිරීමට අවශ්‍යද?")) {
+                if (db) {
+                    const tx = db.transaction("media", "readwrite"); tx.objectStore("media").clear();
+                    tx.oncomplete = () => { customAudioUrls = {}; document.querySelectorAll('[id^="status-"]').forEach(el => el.classList.add('hidden')); };
+                }
+                localStorage.removeItem('daham_main_q_v7'); localStorage.removeItem('daham_backup_q_v7');
+                allQuestions = JSON.parse(JSON.stringify(defaultMainQuestions)); backupQuestions = JSON.parse(JSON.stringify(defaultBackupQuestions));
+                alert("Reset සම්පූර්ණයි."); closeSettingsModal();
+            }
+        }
+
+        // Global Keydown Handler (Mainly for Fallback/PC)
+        document.addEventListener('keydown', (e) => {
+            if (!document.getElementById('settings-modal').classList.contains('hidden')) return;
+
+            if (gameState === 'NAME_INPUT' && e.key === 'Enter') {
+                submitContestantName();
+            }
+
+            if (gameState === 'GAME_PLAYING') {
+                if ((e.key === ' ' || e.code === 'Space') && !answerLocked && displayStep >= 5) {
+                    e.preventDefault(); lockAnswer();
+                }
+                if (!answerLocked && displayStep >= 5) {
+                    const k = e.key.toLowerCase();
+                    if (k === 'z') selectAnswer(0); if (k === 'x') selectAnswer(1); if (k === 'c') selectAnswer(2); if (k === 'v') selectAnswer(3);
+                }
+            }
+        });
+
+        // Mobile Landscape Request & Auto Sequence Starts Here
+        function requestLandscapeAndStart() {
+            if (gameState !== 'start') return;
+            gameState = 'STARTING';
+            
+            // Mobile Device Detection logic
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && window.innerWidth <= 1024);
+
+            if (isMobile) {
+                document.getElementById('rotate-notification').classList.remove('hidden');
+                
+                try {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().then(() => {
+                            if (screen.orientation && screen.orientation.lock) {
+                                screen.orientation.lock('landscape').catch(e => console.log("Orientation lock not supported:", e));
+                            }
+                        }).catch(e => console.log("Fullscreen not supported"));
+                    }
+                } catch (e) {}
+
+                setTimeout(() => {
+                    document.getElementById('rotate-notification').classList.add('hidden');
+                    startGameSequence();
+                }, 4000); // 4 Second delay for mobile rotation animation
+            } else {
+                // Desktop / Laptop: Go directly to game sequence without rotation notification
+                try {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(e => console.log("Fullscreen not supported"));
+                    }
+                } catch (e) {}
+                startGameSequence();
+            }
+        }
+
+        // 1. Initial Start
+        function startGameSequence() {
+            if (audioCtx.state === 'suspended') audioCtx.resume(); 
+            document.getElementById('start-screen').classList.add('hidden');
+            
+            const vidSrc = customMediaUrls['video'] || defaultMediaPaths['video'];
+            const vid = document.getElementById('intro-video-player');
+            vid.src = vidSrc; 
+            vid.classList.remove('hidden');
+            
+            vid.play().catch(() => {
+                // වීඩියෝ ෆයිල් එක media ෆෝල්ඩරයේ නොමැති නම් කිසිදු දෝෂයකින් තොරව Start සවුන්ඩ් එක ප්ලේ වී ඉදිරියට යයි.
+                vid.classList.add('hidden');
+                playGameAudio('start');
+                showNameInputScreen();
+            });
+            vid.onended = () => { vid.classList.add('hidden'); showNameInputScreen(); };
+        }
+
+        // 2. Name Input Logic (Replaced Wheel)
+        function showNameInputScreen() {
+            gameState = 'NAME_INPUT';
+            document.getElementById('name-input-screen').classList.remove('hidden');
+            document.getElementById('contestant-name').value = '';
+            document.getElementById('contestant-name').placeholder = 'නම මෙහි ටයිප් කරන්න...';
+            document.getElementById('contestant-name').focus();
+        }
+
+        function submitContestantName() {
+            if(gameState !== 'NAME_INPUT') return;
+            
+            const nameInput = document.getElementById('contestant-name');
+            const nameField = nameInput.value.trim();
+            
+            if (nameField === "") {
+                // නම හිස් නම් ඉදිරියට යාම වළක්වා, කොටුව රතු පැහැ කර shake කිරීම
+                nameInput.style.animation = 'none';
+                void nameInput.offsetWidth; // Trigger reflow to restart animation
+                nameInput.style.animation = 'shake 0.5s';
+                nameInput.classList.remove('border-yellow-500');
+                nameInput.classList.add('border-red-600');
+                nameInput.placeholder = "කරුණාකර නමක් ඇතුළත් කරන්න!";
+                
+                playPremiumSound('wrong'); // වැරදි බව ඇඟවීමට ශබ්දයක්
+                
+                setTimeout(() => {
+                    nameInput.classList.remove('border-red-600');
+                    nameInput.classList.add('border-yellow-500');
+                }, 1000);
+                
+                return; // ඉදිරියට යාම නවත්වයි
+            }
+            
+            // Insert name handling line breaks if they typed multiple words logically
+            document.getElementById('announce-name').innerHTML = nameField.replace(/\n/g, '<br>');
+            
+            document.getElementById('name-input-screen').classList.add('hidden');
+            showWinnerScreen();
+        }
+
+        function showWinnerScreen() {
+            gameState = 'WINNER_DISPLAYED';
+            document.getElementById('winner-screen').classList.remove('hidden');
+            playGameAudio('winner');
+            confetti({ particleCount: 150, spread: 180, origin: { y: 0.6 }, zIndex: 130 });
+        }
+
+        // 3. Lifeline Intro Logic (Fully Automated)
+        function showLifelinesIntro() {
+            document.getElementById('winner-screen').classList.add('hidden');
+            document.getElementById('lifeline-intro-screen').classList.remove('hidden');
+            gameState = 'LIFELINES_INTRO';
+            
+            const nextBtn = document.getElementById('lifeline-next-btn');
+            nextBtn.classList.add('opacity-0', 'pointer-events-none');
+            nextBtn.classList.remove('animate-pulse');
+            
+            setTimeout(() => { document.getElementById('lifeline-title').style.opacity = '1'; }, 100);
+            
+            setTimeout(() => { document.getElementById('intro-ll-1').classList.remove('opacity-0', 'translate-y-10'); playPremiumSound('select'); }, 1500);
+            setTimeout(() => { document.getElementById('intro-ll-2').classList.remove('opacity-0', 'translate-y-10'); playPremiumSound('select'); }, 3000);
+            setTimeout(() => { document.getElementById('intro-ll-3').classList.remove('opacity-0', 'translate-y-10'); playPremiumSound('select'); }, 4500);
+            
+            setTimeout(() => {
+                nextBtn.classList.remove('opacity-0', 'pointer-events-none');
+                nextBtn.classList.add('animate-pulse');
+            }, 6000);
+        }
+
+        function proceedToGame() {
+            if (gameState !== 'LIFELINES_INTRO') return;
+            gameState = 'TRANSITIONING';
+
+            // ඉවත් කරන ලදී: playGameAudio('transition'); ඊළඟ ෆන්ක්ෂන් එකේදී එය ප්ලේ වන නිසා
+            document.getElementById('lifeline-intro-screen').classList.add('hidden');
+            document.getElementById('lifeline-title').style.opacity = '0';
+            document.getElementById('intro-ll-1').classList.add('opacity-0', 'translate-y-10');
+            document.getElementById('intro-ll-2').classList.add('opacity-0', 'translate-y-10');
+            document.getElementById('intro-ll-3').classList.add('opacity-0', 'translate-y-10');
+            showEmptyGameScreen();
+        }
+
+        // 4. Main Game Logic (Fully Automated Load Sequence)
+        function showEmptyGameScreen() {
+            gameState = 'GAME_EMPTY';
+            const mainGame = document.getElementById('main-game');
+            mainGame.classList.remove('hidden');
+            mainGame.style.display = 'flex';
+            renderLevelTree();
+            
+            // පළමු ප්‍රශ්නයට පෙර හිස් කොටුවක් දිස්වීමේ බග් එක මඟහැරීමට පහත පේළිය ඉවත් කර ඇත
+            document.getElementById('exit-btn').classList.add('hidden');
+            
+            setTimeout(() => {
+                gameState = 'GAME_PLAYING';
+                loadQuestion();
+            }, 1000);
+        }
+
+        function nextState() {
+            document.getElementById('next-btn').classList.add('hidden');
+            for (let i = 0; i < 4; i++) { document.getElementById(`opt-${i}`).style.animation = 'slideOutDown 0.5s ease-in forwards'; }
+            
+            const qContainer = document.getElementById('question-container');
+            qContainer.style.animation = 'flipOutX 0.6s ease-in forwards';
+            
+            setTimeout(() => {
+                document.getElementById('question-text').style.opacity = '0';
+                document.getElementById('question-number').style.opacity = '0';
+            }, 200);
+
+            setTimeout(() => {
+                if (isSwitchPending) {
+                    allQuestions[currentQuestionIndex] = backupQuestions.shift();
+                    loadQuestion(); 
+                } else if (currentQuestionIndex < 14) { 
+                    showPointsTransition(levelRewards[currentQuestionIndex], () => {
+                        currentQuestionIndex++;
+                        loadQuestion();
+                    });
+                }
+            }, 1100); 
+        }
+
+        function resetToHome() {
+            stopBgMusic();
+            if (wheelSpinAudioInstance) { wheelSpinAudioInstance.pause(); wheelSpinAudioInstance.currentTime = 0; }
+
+            const mainGame = document.getElementById('main-game');
+            mainGame.classList.add('hidden');
+            
+            // නැවත ගේම් එක ප්ලේ කිරීමේදී Ghost Box එකක් ඒම වැළැක්වීමට
+            document.getElementById('bottom-section').classList.add('hidden');
+            
+            gameState = 'start';
+            currentQuestionIndex = 0; 
+            lifelines = { fiftyFifty: false, audiencePoll: false, switchQuestion: false };
+            isSwitchPending = false;
+            
+            // නැවත ගේම් එක ආරම්භ කිරීමේදී ප්‍රශ්න මාලාව මුල සිට යාවත්කාලීන කිරීම
+            allQuestions = JSON.parse(localStorage.getItem('daham_main_q_v9')) || JSON.parse(JSON.stringify(defaultMainQuestions));
+            backupQuestions = JSON.parse(localStorage.getItem('daham_backup_q_v9')) || JSON.parse(JSON.stringify(defaultBackupQuestions));
+            
+            document.getElementById('name-input-screen').classList.add('hidden');
+            document.querySelectorAll('.lifeline-btn').forEach(b => b.classList.remove('lifeline-used'));
+            
+            // Play intro video on returning to home screen
+            const videoSrc = customMediaUrls['video'] || defaultMediaPaths['video'];
+            if (videoSrc) {
+                const vid = document.getElementById('intro-video-player');
+                vid.src = videoSrc; 
+                vid.classList.remove('hidden');
+                vid.onended = () => { vid.classList.add('hidden'); document.getElementById('start-screen').classList.remove('hidden'); };
+                vid.play().catch(() => { vid.classList.add('hidden'); document.getElementById('start-screen').classList.remove('hidden'); });
+            } else {
+                document.getElementById('start-screen').classList.remove('hidden');
+                const vid = document.getElementById('intro-video-player');
+                vid.pause(); vid.currentTime = 0; vid.classList.add('hidden');
+            }
+        }
+
+        function renderLevelTree() {
+            const tree = document.getElementById('level-tree');
+            tree.innerHTML = '';
+            for (let i = 1; i <= 15; i++) {
+                const div = document.createElement('div');
+                div.id = `level-${i}`;
+                div.className = `level-item ${i % 5 === 0 ? 'level-safe' : ''}`;
+                div.innerHTML = `<span>${i}</span> <span>◆</span> <span>${levelRewards[i-1]} Points</span>`;
+                tree.appendChild(div);
+            }
+        }
+
+        function updateLevelUI() {
+            for (let i = 1; i <= 15; i++) {
+                const el = document.getElementById(`level-${i}`);
+                if (!el) continue;
+                el.classList.remove('level-current', 'level-passed');
+                if (i < currentQuestionIndex + 1) el.classList.add('level-passed');
+                else if (i === currentQuestionIndex + 1) el.classList.add('level-current');
+            }
+        }
+
+        function loadQuestion() {
+            const q = allQuestions[currentQuestionIndex];
+            playGameAudio('transition');
+            displayStep = 0; 
+            
+            // ප්‍රශ්නය Load වීමට පටන් ගන්නා මොහොතේම පමණක් ප්‍රධාන කොටුව දෘශ්‍යමාන කිරීම
+            document.getElementById('bottom-section').classList.remove('hidden');
+
+            const qWrapper = document.getElementById('q-wrapper');
+            qWrapper.classList.add('translate-y-[100px]', 'scale-[1.05]');
+            qWrapper.classList.remove('translate-y-0', 'scale-100');
+
+            const qContainer = document.getElementById('question-container');
+            const qNum = document.getElementById('question-number');
+            const qText = document.getElementById('question-text');
+
+            qContainer.style.opacity = '0'; qNum.style.opacity = '0'; qText.style.opacity = '0';
+            qContainer.style.animation = 'none'; qNum.style.animation = 'none'; qText.style.animation = 'none';
+            qContainer.classList.remove('animate-enter', 'animate-q-new');
+
+            qNum.innerText = ''; qText.innerHTML = ''; 
+            void qContainer.offsetWidth; 
+
+            qContainer.style.animation = 'slideInFromBottomExt 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards';
+
+            setTimeout(() => {
+                qNum.innerText = isSwitchPending ? "QS" : `Q${currentQuestionIndex + 1}`;
+                isSwitchPending = false;
+                qText.innerHTML = q.question;
+                
+                qNum.style.animation = 'slowFadeInText 1.2s ease-out forwards';
+                qText.style.animation = 'slowFadeInText 1.2s ease-out forwards';
+            }, 800);
+            
+            for (let i = 0; i < 4; i++) {
+                const optBox = document.getElementById(`opt-${i}`);
+                optBox.style.animation = ''; 
+                optBox.className = `hex-outer option-box opacity-0 pointer-events-none`;
+                
+                const textSpan = document.getElementById(`text-${i}`);
+                textSpan.innerText = q.options[i];
+                
+                textSpan.style.visibility = 'hidden'; textSpan.style.opacity = '0';
+                textSpan.style.transition = 'opacity 1.5s ease-in-out';
+                
+                if (q.options[i].length > 55) { textSpan.style.fontSize = "1.1rem"; textSpan.style.lineHeight = "1.3"; } 
+                else if (q.options[i].length > 35) { textSpan.style.fontSize = "1.2rem"; textSpan.style.lineHeight = "1.25"; } 
+                else { textSpan.style.fontSize = "1.3rem"; textSpan.style.lineHeight = "1.2"; }
+            }
+
+            selectedOptionIndex = -1; answerLocked = false;
+            document.getElementById('next-btn').classList.add('hidden');
+            document.getElementById('exit-btn').classList.add('hidden');
+            
+            updateLevelUI(); checkSwitchAvailability();
+
+            // === MOBILE AUTO ANIMATION SEQUENCE ===
+            setTimeout(() => {
+                qWrapper.classList.remove('translate-y-[100px]', 'scale-[1.05]');
+                qWrapper.classList.add('translate-y-0', 'scale-100');
+                for (let i = 0; i < 4; i++) {
+                    const optBox = document.getElementById(`opt-${i}`);
+                    optBox.style.animation = ''; 
+                    optBox.className = `hex-outer option-box animate-enter delay-1`;
+                }
+                startBgMusic(); 
+                
+                // Show options one by one with a nice delay (භාවිතා කර ඇත්තේ බර MP3 ෆයිල් එකක් නොව, ක්ෂණික Select සවුන්ඩ් එකයි)
+                setTimeout(() => { document.getElementById('text-0').style.visibility = 'visible'; document.getElementById('text-0').style.opacity = '1'; playPremiumSound('select'); }, 800);
+                setTimeout(() => { document.getElementById('text-1').style.visibility = 'visible'; document.getElementById('text-1').style.opacity = '1'; playPremiumSound('select'); }, 1600);
+                setTimeout(() => { document.getElementById('text-2').style.visibility = 'visible'; document.getElementById('text-2').style.opacity = '1'; playPremiumSound('select'); }, 2400);
+                setTimeout(() => { document.getElementById('text-3').style.visibility = 'visible'; document.getElementById('text-3').style.opacity = '1'; playPremiumSound('select'); displayStep = 5; }, 3200);
+                
+            }, 2500); // Wait for the main question box to finish sliding in
+        }
+
+        function selectAnswer(index) {
+            if (answerLocked || displayStep < 5) return;
+            selectedOptionIndex = index; playGameAudio('select');
+
+            for (let i = 0; i < 4; i++) { document.getElementById(`opt-${i}`).classList.remove('option-selected'); }
+            document.getElementById(`opt-${index}`).classList.add('option-selected');
+        }
+
+        function lockAnswer() {
+            if (selectedOptionIndex === -1 || answerLocked) return;
+            answerLocked = true; stopBgMusic(); 
+            
+            playGameAudio('lock').then(() => {
+                const correctIndex = allQuestions[currentQuestionIndex].correctAnswer;
+                const selectedBox = document.getElementById(`opt-${selectedOptionIndex}`);
+                const correctBox = document.getElementById(`opt-${correctIndex}`);
+
+                if (selectedOptionIndex === correctIndex) {
+                    selectedBox.classList.remove('option-selected'); selectedBox.classList.add('option-correct');
+                    playGameAudio('correct');
+                    
+                    const flash = document.createElement('div'); flash.className = 'flash-effect';
+                    document.getElementById('flash-container').appendChild(flash);
+                    setTimeout(() => flash.remove(), 500);
+                    
+                    if(currentQuestionIndex === 14 && !isSwitchPending) setTimeout(() => showWinScreen(), 3000);
+                    else document.getElementById('next-btn').classList.remove('hidden');
+                } else {
+                    selectedBox.classList.remove('option-selected'); selectedBox.classList.add('option-wrong');
+                    setTimeout(() => {
+                        correctBox.classList.add('option-correct'); playGameAudio('wrong');
+                        document.getElementById('exit-btn').classList.remove('hidden');
+                    }, 1000);
+                }
+            }); 
+        }
+
+        function showPointsTransition(points, callback) {
+            const container = document.getElementById('points-transition-container');
+            const pointsText = document.getElementById('points-text');
+            const subtext = document.getElementById('points-subtext');
+            
+            pointsText.innerText = `${points} Points!`;
+            pointsText.style.animation = 'none'; subtext.style.animation = 'none';
+            container.classList.remove('hidden'); container.style.opacity = '1';
+            
+            void container.offsetWidth; 
+            playPremiumSound('point-win');
+            
+            pointsText.style.animation = 'scale-in-glow 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+            subtext.style.animation = 'slide-up-fade 0.5s ease forwards 0.3s';
+            
+            setTimeout(() => {
+                pointsText.style.animation = 'fade-out-zoom 0.5s ease forwards';
+                subtext.style.animation = 'fade-out-zoom 0.5s ease forwards';
+                container.style.opacity = '0';
+                setTimeout(() => { container.classList.add('hidden'); callback(); }, 500);
+            }, 2500); 
+        }
+
+        function showWinScreen() {
+            document.getElementById('question-text').innerHTML = `<span class='text-4xl md:text-5xl text-yellow-400 drop-shadow-[0_0_15px_#f8b500] leading-normal'>සුභ පැතුම් !<br>ඔබ ප්‍රශ්ණ සියල්ලටම නිවැරදි පිළිතුරු ලබාදෙමින් ජයග්‍රහණය හිමි කරගන්නවා.</span>`;
+            document.getElementById('options-grid').innerHTML = ''; 
+            document.getElementById('exit-btn').classList.remove('hidden');
+            
+            var duration = 15 * 1000; var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+            function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now(); if (timeLeft <= 0) return clearInterval(interval);
+                var particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        function useFiftyFifty() {
+            if (lifelines.fiftyFifty || answerLocked || displayStep < 5) return;
+            playPremiumSound('transition'); lifelines.fiftyFifty = true; document.getElementById('btn-5050').classList.add('lifeline-used');
+            const correctIndex = allQuestions[currentQuestionIndex].correctAnswer; let hiddenCount = 0;
+            for (let i = 0; i < 4; i++) {
+                if (i !== correctIndex && hiddenCount < 2) { document.getElementById(`text-${i}`).style.visibility = 'hidden'; hiddenCount++; }
+            }
+        }
+
+        function useAudiencePoll() {
+            if (lifelines.audiencePoll || answerLocked || displayStep < 5) return;
+            playPremiumSound('select'); lifelines.audiencePoll = true; document.getElementById('btn-audience').classList.add('lifeline-used');
+            
+            const modal = document.getElementById('audience-modal');
+            modal.classList.remove('hidden');
+
+            const q = allQuestions[currentQuestionIndex];
+            const correctIndex = q.correctAnswer;
+
+            let percentages = [0, 0, 0, 0];
+            percentages[correctIndex] = Math.floor(Math.random() * 21) + 60; // 60% - 80%
+            let remaining = 100 - percentages[correctIndex];
+
+            // 50:50 භාවිතා කර ඇත්දැයි බැලීම
+            let validOthers = [];
+            for (let i = 0; i < 4; i++) {
+                if (i !== correctIndex && document.getElementById(`text-${i}`).style.visibility !== 'hidden') {
+                    validOthers.push(i);
+                }
+            }
+
+            if (validOthers.length === 1) {
+                // 50:50 භාවිතා කර ඇත, ඇත්තේ තව එක් පිළිතුරක් පමණි
+                percentages[validOthers[0]] = remaining;
+            } else {
+                // පිළිතුරු 3 ම ඇත
+                percentages[validOthers[0]] = Math.floor(Math.random() * (remaining - 10));
+                remaining -= percentages[validOthers[0]];
+                percentages[validOthers[1]] = Math.floor(Math.random() * remaining);
+                percentages[validOthers[2]] = remaining - percentages[validOthers[1]];
+            }
+
+            // අලංකාර ලෙස ප්‍රතිශතයන් පිරවීමේ ඇනිමේෂන් එක
+            for (let i = 0; i < 4; i++) {
+                const bar = document.getElementById(`bar-opt-${i}`);
+                const pctText = document.getElementById(`pct-opt-${i}`);
+                
+                bar.style.width = '0%'; 
+                pctText.innerText = '0%';
+                
+                setTimeout(() => {
+                    bar.style.width = percentages[i] + '%';
+                    
+                    let current = 0;
+                    let step = percentages[i] / 20; // steps for smooth counter
+                    if(percentages[i] > 0) {
+                        let interval = setInterval(() => {
+                            current += step;
+                            if (current >= percentages[i]) { current = percentages[i]; clearInterval(interval); }
+                            pctText.innerText = Math.round(current) + '%';
+                        }, 50);
+                    }
+                }, 300);
+            }
+        }
+
+        function closeAudiencePoll() { 
+            document.getElementById('audience-modal').classList.add('hidden'); 
+        }
+
+        function checkSwitchAvailability() {
+            const switchBtn = document.getElementById('btn-switch');
+            if (!lifelines.switchQuestion) switchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            else if (lifelines.switchQuestion) switchBtn.classList.add('lifeline-used');
+        }
+
+        function useSwitchQuestion() {
+            if (lifelines.switchQuestion || answerLocked || displayStep < 5) return; 
+            if (backupQuestions.length > 0) {
+                stopBgMusic(); playPremiumSound('transition');
+                lifelines.switchQuestion = true; document.getElementById('btn-switch').classList.add('lifeline-used');
+                answerLocked = true;
+                
+                setTimeout(() => {
+                    const correctIndex = allQuestions[currentQuestionIndex].correctAnswer;
+                    document.getElementById(`opt-${correctIndex}`).classList.add('option-correct');
+                    playPremiumSound('correct'); isSwitchPending = true; document.getElementById('next-btn').classList.remove('hidden');
+                }, 1500);
+            }
+        }
+    </script>
+</body>
+</html>
